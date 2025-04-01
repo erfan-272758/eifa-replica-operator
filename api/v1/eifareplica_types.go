@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,18 +25,22 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // EifaReplicaSpec defines the desired state of EifaReplica
+type ScaleTargetRef struct {
+	Kind       string `json:"kind"`
+	Name       string `json:"name"`
+	ApiVersion string `json:"apiVersion,omitempty"`
+}
 type EifaReplicaSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of EifaReplica. Edit eifareplica_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ScaleTargetRef ScaleTargetRef          `json:"scaleTargetRef"`
+	MinReplicas    int                     `json:"minReplicas,omitempty"`
+	MaxReplicas    int                     `json:"maxReplicas,omitempty"`
+	Schedule       string                  `json:"schedule"`
+	JobTemplate    batchv1.JobTemplateSpec `json:"jobTemplate"`
 }
 
 // EifaReplicaStatus defines the observed state of EifaReplica
 type EifaReplicaStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // +kubebuilder:object:root=true
