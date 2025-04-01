@@ -8519,8 +8519,6 @@ spec:
               scaleTargetRef:
                 description: EifaReplicaSpec defines the desired state of EifaReplica
                 properties:
-                  apiVersion:
-                    type: string
                   kind:
                     type: string
                   name:

@@ -18,8 +18,11 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -41,7 +44,6 @@ type EifaReplicaReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
 // the EifaReplica object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
@@ -49,11 +51,56 @@ type EifaReplicaReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
+	log.Info("starting reconciliation")
 
-	// TODO(user): your logic here
+	// Fetch EifaReplica object
+	eifaReplica := &schedulev1.EifaReplica{}
+	if err := r.Get(ctx, req.NamespacedName, eifaReplica); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("EifaReplica resource not found. Ignoring since object must be deleted")
 
-	return ctrl.Result{}, nil
+			return ctrl.Result{}, nil
+		}
+
+		log.Error(err, "Failed to get EifaReplica")
+
+		return ctrl.Result{}, err
+
+	}
+
+	// Calculate desired replicas based on JobTemplate and Scheduler
+	desiredReplicas, err := r.GetDesiredReplica(ctx, req, eifaReplica)
+	if err != nil {
+		log.Error(err, "failed to calculate desired replicas")
+		return ctrl.Result{}, err
+	}
+
+	// Fetch target
+	if eifaReplica.Spec.ScaleTargetRef.Kind != "deployment" || eifaReplica.Spec.ScaleTargetRef.Kind == "deploy" {
+		log.Info("invalid scale target kind")
+		return ctrl.Result{}, fmt.Errorf("invalid scale target kind: %s", eifaReplica.Spec.ScaleTargetRef.Kind)
+	}
+	targetObj := &appsv1.Deployment{}
+
+	if err := r.Get(ctx, client.ObjectKey{Namespace: req.Namespace, Name: eifaReplica.Spec.ScaleTargetRef.Name}, targetObj); err != nil {
+		log.Error(err, "unable to fetch target")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Check current replicas against desired replicas
+	if *targetObj.Spec.Replicas != desiredReplicas {
+		log.Info("updating deployment replicas", "desiredReplicas", desiredReplicas)
+		targetObj.Spec.Replicas = &desiredReplicas
+		if err := r.Update(ctx, targetObj); err != nil {
+			log.Error(err, "failed to update deployment replicas")
+			return ctrl.Result{}, err
+		}
+	}
+
+	log.Info("ending reconciliation")
+	return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+
 }
 
 // SetupWithManager sets up the controller with the Manager.

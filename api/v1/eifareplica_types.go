@@ -26,9 +26,8 @@ import (
 
 // EifaReplicaSpec defines the desired state of EifaReplica
 type ScaleTargetRef struct {
-	Kind       string `json:"kind"`
-	Name       string `json:"name"`
-	ApiVersion string `json:"apiVersion,omitempty"`
+	Kind string `json:"kind"`
+	Name string `json:"name"`
 }
 type EifaReplicaSpec struct {
 	ScaleTargetRef ScaleTargetRef          `json:"scaleTargetRef"`
