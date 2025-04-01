@@ -1,0 +1,23 @@
+# permissions for end users to view eifareplicas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: eifa-replica-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: eifareplica-viewer-role
+rules:
+- apiGroups:
+  - schedule.eifa.org
+  resources:
+  - eifareplicas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - schedule.eifa.org
+  resources:
+  - eifareplicas/status
+  verbs:
+  - get

@@ -1,0 +1,9 @@
+apiVersion: schedule.eifa.org/v1
+kind: EifaReplica
+metadata:
+  labels:
+    app.kubernetes.io/name: eifa-replica-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: eifareplica-sample
+spec:
+  # TODO(user): Add fields here

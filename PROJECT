@@ -10,4 +10,14 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: eifa-replica-operator
 repo: github.com/erfan-272758/eifa-replica-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: eifa.org
+  group: schedule
+  kind: EifaReplica
+  path: github.com/erfan-272758/eifa-replica-operator/api/v1
+  version: v1
 version: "3"

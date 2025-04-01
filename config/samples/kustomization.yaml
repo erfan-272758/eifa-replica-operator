@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- schedule_v1_eifareplica.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

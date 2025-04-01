@@ -34,6 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	schedulev1 "github.com/erfan-272758/eifa-replica-operator/api/v1"
+	"github.com/erfan-272758/eifa-replica-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -45,6 +48,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(schedulev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -140,6 +144,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controller.EifaReplicaReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EifaReplica")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

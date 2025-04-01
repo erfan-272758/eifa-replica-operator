@@ -1,0 +1,27 @@
+# permissions for end users to edit eifareplicas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: eifa-replica-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: eifareplica-editor-role
+rules:
+- apiGroups:
+  - schedule.eifa.org
+  resources:
+  - eifareplicas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - schedule.eifa.org
+  resources:
+  - eifareplicas/status
+  verbs:
+  - get
