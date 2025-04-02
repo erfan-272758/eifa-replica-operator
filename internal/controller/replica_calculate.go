@@ -60,8 +60,8 @@ func (r *EifaReplicaReconciler) GetDesiredReplica(ctx context.Context, req ctrl.
 		repStatusArr = append(repStatusArr, schedulev1.ReplicationStatus{
 			Status:         schedulev1.JOB_FAILED,
 			Reason:         err.Error(),
-			StartAt:        startAt.String(),
-			NextAt:         cron.Next(time.Now()).String(),
+			StartAt:        startAt.Format(time.RFC3339),
+			NextAt:         cron.Next(time.Now()).Format(time.RFC3339),
 			CurrentReplica: defaultReplica,
 			DesiredReplica: defaultReplica,
 		})
