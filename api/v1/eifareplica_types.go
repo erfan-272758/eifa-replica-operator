@@ -31,15 +31,29 @@ type ScaleTargetRef struct {
 }
 type EifaReplicaSpec struct {
 	ScaleTargetRef ScaleTargetRef          `json:"scaleTargetRef"`
-	MinReplicas    int                     `json:"minReplicas,omitempty"`
-	MaxReplicas    int                     `json:"maxReplicas,omitempty"`
+	MinReplicas    int32                   `json:"minReplicas,omitempty"`
+	MaxReplicas    int32                   `json:"maxReplicas,omitempty"`
 	Schedule       string                  `json:"schedule"`
 	JobTemplate    batchv1.JobTemplateSpec `json:"jobTemplate"`
 }
 
+const (
+	JOB_SUCCESS = "job-success"
+	JOB_FAILED  = "job-failed"
+)
+
+type ReplicationStatus struct {
+	Status         string `json:"status"`
+	Reason         string `json:"reason"`
+	StartAt        string `json:"startAt"`
+	NextAt         string `json:"nextAt"`
+	DesiredReplica int32  `json:"desiredReplica"`
+	CurrentReplica int32  `json:"currentReplica"`
+}
+
 // EifaReplicaStatus defines the observed state of EifaReplica
 type EifaReplicaStatus struct {
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	ReplicationStatus []ReplicationStatus `json:"replicationStatus"`
 }
 
 // +kubebuilder:object:root=true
