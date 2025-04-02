@@ -33,7 +33,12 @@ func (r *EifaReplicaReconciler) GetDesiredReplica(ctx context.Context, req ctrl.
 		defaultReplica = repStatus.DesiredReplica
 
 		// check time
-		if t, err := time.Parse(time.RFC3339, repStatus.NextAt); err != nil || time.Now().Before(t) {
+		t, err := time.Parse(time.RFC3339, repStatus.NextAt)
+		if err != nil {
+			log.Info("can not parse next time")
+			return defaultReplica, err
+		}
+		if time.Now().Before(t) {
 			log.Info("time is not exceeded")
 			return defaultReplica, nil
 		}
@@ -95,6 +100,7 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 	}
 
 	eifaReplica.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+	eifaReplica.Spec.JobTemplate.CreationTimestamp = metav1.Now()
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
