@@ -34,7 +34,7 @@ type EifaReplicaSpec struct {
 	MinReplicas    int32                   `json:"minReplicas,omitempty"`
 	MaxReplicas    int32                   `json:"maxReplicas,omitempty"`
 	Schedule       string                  `json:"schedule"`
-	JobTemplate    batchv1.JobTemplateSpec `json:"jobTemplate"`
+	JobTemplate    batchv1.JobTemplateSpec `json:"jobTemplate" protobuf:"bytes,1,opt,name=jobTemplate"`
 }
 
 const (
