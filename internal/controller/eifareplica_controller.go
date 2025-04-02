@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -80,9 +81,10 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Fetch target
-	if eifaReplica.Spec.ScaleTargetRef.Kind != "deployment" || eifaReplica.Spec.ScaleTargetRef.Kind == "deploy" {
+	kind := strings.ToLower(eifaReplica.Spec.ScaleTargetRef.Kind)
+	if kind != "deployment" || kind == "deploy" {
 		log.Info("invalid scale target kind")
-		return ctrl.Result{RequeueAfter: requeueAfter}, fmt.Errorf("invalid scale target kind: %s", eifaReplica.Spec.ScaleTargetRef.Kind)
+		return ctrl.Result{RequeueAfter: requeueAfter}, fmt.Errorf("invalid scale target kind: %s", kind)
 	}
 	targetObj := &appsv1.Deployment{}
 
