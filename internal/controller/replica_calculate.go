@@ -104,8 +104,8 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-job-%s", req.Name, time.Now().Format(time.RFC3339)),
-			Namespace: req.Namespace,
+			GenerateName: fmt.Sprintf("%s-job-%s", req.Name, time.Now().Format(time.DateOnly)),
+			Namespace:    req.Namespace,
 		},
 		Spec: eifaReplica.Spec.JobTemplate.Spec,
 	}
