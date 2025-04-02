@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: test
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+---
+apiVersion: schedule.eifa.org/v1
+kind: EifaReplica
+metadata:
+  name: eifa-replica
+  namespace: test
+spec:
+  scaleTargetRef:
+    name: nginx
+    kind: deployment
+  minReplicas: 1
+  maxReplicas: 10
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: job-test
+        spec:
+          containers:
+          - name: random-container
+            image: erfan272758/random-replica:v1
+      backoffLimit: 2
