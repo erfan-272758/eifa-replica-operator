@@ -100,7 +100,6 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 	}
 
 	eifaReplica.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
-	eifaReplica.Spec.JobTemplate.CreationTimestamp = metav1.Now()
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
