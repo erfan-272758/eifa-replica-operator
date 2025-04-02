@@ -42,9 +42,6 @@ spec:
   jobTemplate:
     spec:
       template:
-        metadata:
-          labels:
-            app: job-test
         spec:
           containers:
           - name: random-container
