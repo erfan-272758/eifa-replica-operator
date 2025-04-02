@@ -38,6 +38,7 @@ type EifaReplicaReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=schedule.eifa.org,resources=eifareplicas,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=schedule.eifa.org,resources=eifareplicas/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=schedule.eifa.org,resources=eifareplicas/finalizers,verbs=update
@@ -69,23 +70,25 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	}
 
+	requeueAfter := 15 * time.Second
+
 	// Calculate desired replicas based on JobTemplate and Scheduler
 	desiredReplicas, err := r.GetDesiredReplica(ctx, req, eifaReplica)
 	if err != nil {
 		log.Error(err, "failed to calculate desired replicas")
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: requeueAfter}, err
 	}
 
 	// Fetch target
 	if eifaReplica.Spec.ScaleTargetRef.Kind != "deployment" || eifaReplica.Spec.ScaleTargetRef.Kind == "deploy" {
 		log.Info("invalid scale target kind")
-		return ctrl.Result{}, fmt.Errorf("invalid scale target kind: %s", eifaReplica.Spec.ScaleTargetRef.Kind)
+		return ctrl.Result{RequeueAfter: requeueAfter}, fmt.Errorf("invalid scale target kind: %s", eifaReplica.Spec.ScaleTargetRef.Kind)
 	}
 	targetObj := &appsv1.Deployment{}
 
 	if err := r.Get(ctx, client.ObjectKey{Namespace: req.Namespace, Name: eifaReplica.Spec.ScaleTargetRef.Name}, targetObj); err != nil {
 		log.Error(err, "unable to fetch target")
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{RequeueAfter: requeueAfter}, client.IgnoreNotFound(err)
 	}
 
 	// Check current replicas against desired replicas
@@ -94,12 +97,12 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		targetObj.Spec.Replicas = &desiredReplicas
 		if err := r.Update(ctx, targetObj); err != nil {
 			log.Error(err, "failed to update deployment replicas")
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: requeueAfter}, err
 		}
 	}
 
 	log.Info("ending reconciliation")
-	return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 
 }
 
@@ -107,6 +110,5 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *EifaReplicaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&schedulev1.EifaReplica{}).
-		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
