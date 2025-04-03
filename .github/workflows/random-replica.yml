@@ -3,8 +3,8 @@ name: Random Replica CI/CD
 on:
   push:
     paths:
-      - "examples/random-replica/**"
-      - ".github/workflows/example-ci.yml"
+      - "example/random-replica/**"
+      - ".github/workflows/random-replica.yml"
 
 jobs:
   build-and-push:
