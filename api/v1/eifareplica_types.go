@@ -26,15 +26,22 @@ import (
 
 // EifaReplicaSpec defines the desired state of EifaReplica
 type ScaleTargetRef struct {
+	// +kubebuilder:validation:Enum={"Deployment","deployment","deploy","Deploy"}
 	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
 type EifaReplicaSpec struct {
-	ScaleTargetRef ScaleTargetRef          `json:"scaleTargetRef"`
-	MinReplicas    int32                   `json:"minReplicas,omitempty"`
-	MaxReplicas    int32                   `json:"maxReplicas,omitempty"`
-	Schedule       string                  `json:"schedule"`
-	JobTemplate    batchv1.JobTemplateSpec `json:"jobTemplate" protobuf:"bytes,1,opt,name=jobTemplate"`
+	ScaleTargetRef ScaleTargetRef `json:"scaleTargetRef"`
+
+	// +kubebuilder:validation:Minimum=0
+	MinReplicas int32 `json:"minReplicas,omitempty"`
+
+	// +kubebuilder:validation:Minimum=0
+	MaxReplicas int32 `json:"maxReplicas,omitempty"`
+
+	// +kubebuilder:validation:Pattern=`^(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)|((((\d+,)+\d+|(\d+(\/|-)\d+)|\d+|\*) ?){5,7})$`
+	Schedule    string                  `json:"schedule"`
+	JobTemplate batchv1.JobTemplateSpec `json:"jobTemplate" protobuf:"bytes,1,opt,name=jobTemplate"`
 }
 
 const (

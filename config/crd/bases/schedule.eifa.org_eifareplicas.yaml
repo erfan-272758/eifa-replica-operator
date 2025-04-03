@@ -3750,13 +3750,20 @@ spec:
                 type: object
               maxReplicas:
                 format: int32
+                minimum: 0
                 type: integer
               minReplicas:
                 format: int32
+                minimum: 0
                 type: integer
               scaleTargetRef:
                 properties:
                   kind:
+                    enum:
+                    - Deployment
+                    - deployment
+                    - deploy
+                    - Deploy
                     type: string
                   name:
                     type: string
@@ -3765,6 +3772,9 @@ spec:
                 - name
                 type: object
               schedule:
+                pattern: ^(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every
+                  (\d+(ns|us|µs|ms|s|m|h))+)|((((\d+,)+\d+|(\d+(\/|-)\d+)|\d+|\*)
+                  ?){5,7})$
                 type: string
             required:
             - jobTemplate
