@@ -29,7 +29,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	schedulev1 "github.com/erfan-272758/eifa-replica-operator/api/v1"
 )
@@ -158,5 +160,6 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *EifaReplicaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&schedulev1.EifaReplica{}).
+		WithOptions(controller.TypedOptions[reconcile.Request]{MaxConcurrentReconciles: 100}).
 		Complete(r)
 }
