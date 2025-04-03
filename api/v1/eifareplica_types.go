@@ -40,6 +40,7 @@ type EifaReplicaSpec struct {
 const (
 	JOB_SUCCESS = "job-success"
 	JOB_FAILED  = "job-failed"
+	JOB_RUNNING = "job-running"
 )
 
 type ReplicationStatus struct {
