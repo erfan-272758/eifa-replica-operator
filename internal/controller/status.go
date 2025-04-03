@@ -26,6 +26,5 @@ func (r *EifaReplicaReconciler) UpdateStatus(ctx context.Context, eifaReplica *s
 	if next != nil {
 		eifaReplica.Status.NextTransitionTime = next.Format(time.RFC3339)
 	}
-
 	return r.Status().Update(ctx, eifaReplica)
 }

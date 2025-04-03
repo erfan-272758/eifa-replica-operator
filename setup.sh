@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 GO_VERSION="go1.23.2.linux-amd64.tar.gz"
-IMG=erfan272758/eifa-replica-operator:v11
+IMG=erfan272758/eifa-replica-operator:v12
 # golang
 wget https://go.dev/dl/$GO_VERSION
 rm -rf /usr/local/go

@@ -88,8 +88,8 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Type:               schedulev1.FAILED,
 			Status:             metav1.ConditionTrue,
 			LastTransitionTime: metav1.Now(),
-			Reason:             fmt.Sprintf("[get-desired-replica] %s", err),
-			Message:            "Failed to calculate desired replicas",
+			Reason:             "GetDesiredReplicaError",
+			Message:            fmt.Sprintf("[get-desired-replica] %s", err),
 		}, next)
 
 		return ctrl.Result{RequeueAfter: requeueAfter}, nil
@@ -108,8 +108,8 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Type:               schedulev1.FAILED,
 			Status:             metav1.ConditionTrue,
 			LastTransitionTime: metav1.Now(),
-			Reason:             err.Error(),
-			Message:            "Invalid scale target kind",
+			Reason:             "InvalidSpec",
+			Message:            err.Error(),
 		}, next)
 		return ctrl.Result{RequeueAfter: requeueAfter}, nil
 	}
@@ -120,8 +120,8 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Type:               schedulev1.FAILED,
 			Status:             metav1.ConditionTrue,
 			LastTransitionTime: metav1.Now(),
-			Reason:             fmt.Sprintf("Unable to fetch ScaleTargetRef, %s", err),
-			Message:            "Unable to fetch ScaleTargetRef",
+			Reason:             "InvalidSpec",
+			Message:            fmt.Sprintf("Unable to fetch ScaleTargetRef, %s", err),
 		}, next)
 
 		return ctrl.Result{RequeueAfter: requeueAfter}, client.IgnoreNotFound(err)
@@ -130,13 +130,14 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Check current replicas against desired replicas
 	if *targetObj.Spec.Replicas != *desiredReplicas {
 		targetObj.Spec.Replicas = desiredReplicas
+		msg := fmt.Sprintf("update target replica from %d to %d", *targetObj.Spec.Replicas, *desiredReplicas)
 		if err := r.Update(ctx, targetObj); err != nil {
 			r.UpdateStatus(ctx, eifaReplica, &metav1.Condition{
 				Type:               schedulev1.FAILED,
 				Status:             metav1.ConditionTrue,
 				LastTransitionTime: metav1.Now(),
-				Reason:             fmt.Sprintf("[update-target-replicas] %s", err),
-				Message:            "Failed to update target replicas",
+				Reason:             "UpdateTargetReplicaError",
+				Message:            fmt.Sprintf("[update-target-replicas] %s", err),
 			}, next)
 			return ctrl.Result{RequeueAfter: requeueAfter}, nil
 		}
@@ -144,8 +145,8 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Type:               schedulev1.SUCCESS,
 			Status:             metav1.ConditionTrue,
 			LastTransitionTime: metav1.Now(),
-			Reason:             fmt.Sprintf("update target replica from %d to %d", *targetObj.Spec.Replicas, *desiredReplicas),
-			Message:            "reconcile successfully done",
+			Reason:             "UpdateTargetReplica",
+			Message:            msg,
 		}, next)
 	}
 
