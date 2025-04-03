@@ -38,27 +38,22 @@ type EifaReplicaSpec struct {
 }
 
 const (
-	JOB_SUCCESS = "job-success"
-	JOB_FAILED  = "job-failed"
-	JOB_RUNNING = "job-running"
+	JOB_SUCCESS = "Job-Success"
+	JOB_FAILED  = "Job-Failed"
+	JOB_RUNNING = "Job-Running"
+	FAILED      = "Failed"
+	SUCCESS     = "Success"
 )
-
-type ReplicationStatus struct {
-	Status         string `json:"status"`
-	Reason         string `json:"reason"`
-	StartAt        string `json:"startAt"`
-	NextAt         string `json:"nextAt"`
-	DesiredReplica int32  `json:"desiredReplica"`
-	CurrentReplica int32  `json:"currentReplica"`
-}
 
 // EifaReplicaStatus defines the observed state of EifaReplica
 type EifaReplicaStatus struct {
-	ReplicationStatus []ReplicationStatus `json:"replicationStatus"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	NextTransitionTime string             `json:"nextTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=er
 
 // EifaReplica is the Schema for the eifareplicas API
 type EifaReplica struct {

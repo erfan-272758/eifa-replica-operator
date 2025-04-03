@@ -24,6 +24,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -77,36 +78,77 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	requeueAfter := 15 * time.Second
 
 	// Calculate desired replicas based on JobTemplate and Scheduler
-	desiredReplicas, err := r.GetDesiredReplica(ctx, req, eifaReplica)
+	desiredReplicas, next, err := r.GetDesiredReplica(ctx, req, eifaReplica)
+	if next != nil {
+		requeueAfter = time.Until(*next)
+	}
 	if err != nil {
-		log.Error(err, "failed to calculate desired replicas")
-		return ctrl.Result{RequeueAfter: requeueAfter}, err
+		// update status
+		r.UpdateStatus(ctx, eifaReplica, &metav1.Condition{
+			Type:               schedulev1.FAILED,
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             fmt.Sprintf("[get-desired-replica] %s", err),
+			Message:            "Failed to calculate desired replicas",
+		}, next)
+
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
+	}
+
+	if desiredReplicas == nil {
+		// dose not need to change anythings
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
 	}
 
 	// Fetch target
 	kind := strings.ToLower(eifaReplica.Spec.ScaleTargetRef.Kind)
 	if kind != "deployment" || kind == "deploy" {
-		log.Info("invalid scale target kind")
-		return ctrl.Result{RequeueAfter: requeueAfter}, fmt.Errorf("invalid scale target kind: %s", kind)
+		err = fmt.Errorf(".Spec.ScaleTargetRef.Kind must be deploy of deployment got %s", kind)
+		r.UpdateStatus(ctx, eifaReplica, &metav1.Condition{
+			Type:               schedulev1.FAILED,
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             err.Error(),
+			Message:            "Invalid scale target kind",
+		}, next)
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
 	}
 	targetObj := &appsv1.Deployment{}
 
 	if err := r.Get(ctx, client.ObjectKey{Namespace: req.Namespace, Name: eifaReplica.Spec.ScaleTargetRef.Name}, targetObj); err != nil {
-		log.Error(err, "unable to fetch target")
+		r.UpdateStatus(ctx, eifaReplica, &metav1.Condition{
+			Type:               schedulev1.FAILED,
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             fmt.Sprintf("Unable to fetch ScaleTargetRef, %s", err),
+			Message:            "Unable to fetch ScaleTargetRef",
+		}, next)
+
 		return ctrl.Result{RequeueAfter: requeueAfter}, client.IgnoreNotFound(err)
 	}
 
 	// Check current replicas against desired replicas
-	if *targetObj.Spec.Replicas != desiredReplicas {
-		log.Info("updating deployment replicas", "desiredReplicas", desiredReplicas)
-		targetObj.Spec.Replicas = &desiredReplicas
+	if *targetObj.Spec.Replicas != *desiredReplicas {
+		targetObj.Spec.Replicas = desiredReplicas
 		if err := r.Update(ctx, targetObj); err != nil {
-			log.Error(err, "failed to update deployment replicas")
-			return ctrl.Result{RequeueAfter: requeueAfter}, err
+			r.UpdateStatus(ctx, eifaReplica, &metav1.Condition{
+				Type:               schedulev1.FAILED,
+				Status:             metav1.ConditionTrue,
+				LastTransitionTime: metav1.Now(),
+				Reason:             fmt.Sprintf("[update-target-replicas] %s", err),
+				Message:            "Failed to update target replicas",
+			}, next)
+			return ctrl.Result{RequeueAfter: requeueAfter}, nil
 		}
+		r.UpdateStatus(ctx, eifaReplica, &metav1.Condition{
+			Type:               schedulev1.SUCCESS,
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             fmt.Sprintf("update target replica from %d to %d", *targetObj.Spec.Replicas, *desiredReplicas),
+			Message:            "reconcile successfully done",
+		}, next)
 	}
 
-	log.Info("ending reconciliation")
 	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 
 }

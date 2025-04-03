@@ -16,24 +16,27 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, eifaReplica *schedulev1.EifaReplica) (int32, error) {
 	// 1. init job obj
-	log := log.FromContext(ctx)
-	activeSec := int64(15)
-	backoffLim := int32(1)
 
 	// set defaults
+	defActiveSec := int64(15)
+	defBackoffLim := int32(1)
+	completions := int32(1)
+	parallelism := int32(1)
+
 	if eifaReplica.Spec.JobTemplate.Spec.ActiveDeadlineSeconds == nil {
-		eifaReplica.Spec.JobTemplate.Spec.ActiveDeadlineSeconds = &activeSec
+		eifaReplica.Spec.JobTemplate.Spec.ActiveDeadlineSeconds = &defActiveSec
 	}
 	if eifaReplica.Spec.JobTemplate.Spec.BackoffLimit == nil {
-		eifaReplica.Spec.JobTemplate.Spec.BackoffLimit = &backoffLim
+		eifaReplica.Spec.JobTemplate.Spec.BackoffLimit = &defBackoffLim
 	}
 
 	eifaReplica.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+	eifaReplica.Spec.JobTemplate.Spec.Completions = &completions
+	eifaReplica.Spec.JobTemplate.Spec.Parallelism = &parallelism
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -44,14 +47,12 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 	}
 	// 2. set owner ref
 	if err := ctrl.SetControllerReference(eifaReplica, job, r.Scheme); err != nil {
-		log.Info("can not set owner ref")
-		return 0, err
+		return 0, fmt.Errorf("can not set owner ref, %s", err)
 	}
 
 	// 3. create job
 	if err := r.Client.Create(ctx, job); err != nil {
-		log.Info("can not create job")
-		return 0, err
+		return 0, fmt.Errorf("can not create job, %s", err)
 	}
 
 	// 4. wait for completion
@@ -62,8 +63,7 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 	for {
 		err := r.Get(ctx, jobKey, &compJob)
 		if err != nil {
-			log.Info("can not get job")
-			return 0, err
+			return 0, fmt.Errorf("can not get created job, %s", err)
 		}
 		jobStatus := r.checkJobStatus(&compJob)
 
@@ -74,7 +74,6 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 
 		// job ends without any success pods
 		if jobStatus == schedulev1.JOB_FAILED {
-			log.Info("job ends without any success pods")
 			return 0, fmt.Errorf("job ends without any success pods")
 		}
 
@@ -84,22 +83,18 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 	// 5. read logs to find desired replica
 	desiredReplica, err := r.parseJobLogs(ctx, jobKey)
 	if err != nil {
-		log.Info("can not parse pod logs")
-		return 0, err
+		return 0, fmt.Errorf("[parse-job-logs] %s", err)
 	}
 
-	return max(eifaReplica.Spec.MinReplicas, min(eifaReplica.Spec.MaxReplicas), desiredReplica), nil
+	return max(eifaReplica.Spec.MinReplicas, min(eifaReplica.Spec.MaxReplicas, desiredReplica)), nil
 
 }
 
 func (r *EifaReplicaReconciler) parseJobLogs(ctx context.Context, jobKey types.NamespacedName) (int32, error) {
-	log := log.FromContext(ctx)
-
 	// Step 1: List Pods associated with the Job
 	podList := &corev1.PodList{}
 	if err := r.List(ctx, podList, client.InNamespace(jobKey.Namespace), client.MatchingLabels{"job-name": jobKey.Name}); err != nil {
-		log.Info("failed to list pods")
-		return 0, fmt.Errorf("failed to list pods: %w", err)
+		return 0, fmt.Errorf("can not get list of pods: %w", err)
 	}
 
 	// Step 2: Find Success Pod
@@ -112,7 +107,6 @@ func (r *EifaReplicaReconciler) parseJobLogs(ctx context.Context, jobKey types.N
 	}
 
 	if pod == nil {
-		log.Info("can not find success pod")
 		return 0, fmt.Errorf("can not find success pod")
 	}
 
@@ -120,7 +114,7 @@ func (r *EifaReplicaReconciler) parseJobLogs(ctx context.Context, jobKey types.N
 
 	clientset, err := kubernetes.NewForConfig(ctrl.GetConfigOrDie())
 	if err != nil {
-		return 0, fmt.Errorf("failed to create clientset: %w", err)
+		return 0, fmt.Errorf("failed to create clientset: %s", err)
 	}
 
 	tail := int64(1)
@@ -128,19 +122,19 @@ func (r *EifaReplicaReconciler) parseJobLogs(ctx context.Context, jobKey types.N
 	// Step 3: Stream logs from the pod
 	logs, err := req.Stream(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to stream logs: %w", err)
+		return 0, fmt.Errorf("failed to stream logs: %s", err)
 	}
 	defer logs.Close()
 
 	// Step 4: Read logs
 	logContent, err := io.ReadAll(logs)
 	if err != nil {
-		return 0, fmt.Errorf("failed to read logs: %w", err)
+		return 0, fmt.Errorf("failed to read logs: %s", err)
 	}
 
 	desiredReplica, err := strconv.ParseInt(strings.TrimSpace((string(logContent))), 10, 32)
 	if err != nil {
-		return 0, fmt.Errorf("can not parse log to int, %s", err.Error())
+		return 0, fmt.Errorf("can not parse log to int, %s", err)
 	}
 
 	return int32(desiredReplica), nil
