@@ -1,0 +1,33 @@
+name: Example CI/CD
+
+on:
+  push:
+    paths:
+      - "examples/random-replica/**"
+      - ".github/workflows/example-ci.yml"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: random-replica
+      TAG: v${{ github.run_id }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Registry
+        env:
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        run: echo "${REGISTRY_PASSWORD}" | docker login -u "${REGISTRY_USERNAME}" --password-stdin
+
+      - name: ‌Build and Push Operator Image
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        run: |
+          cd example/random-replica
+          docker build -t $REGISTRY_USERNAME/$IMAGE_NAME:$TAG .
+          docker push $REGISTRY_USERNAME/$IMAGE_NAME:$TAG

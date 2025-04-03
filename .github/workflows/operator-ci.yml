@@ -1,0 +1,31 @@
+name: Operator CI/CD
+
+on:
+  push:
+    paths-ignore:
+      - "example/**"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: eifa-replica-operator
+      TAG: v${{ github.run_id }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Registry
+        env:
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        run: echo "${REGISTRY_PASSWORD}" | docker login -u "${REGISTRY_USERNAME}" --password-stdin
+
+      - name: ‌Build and Push Operator Image
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        run: |
+          docker build -t $REGISTRY_USERNAME/$IMAGE_NAME:$TAG .
+          docker push $REGISTRY_USERNAME/$IMAGE_NAME:$TAG
