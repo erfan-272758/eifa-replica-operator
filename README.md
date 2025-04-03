@@ -1,8 +1,11 @@
 # eifa-replica-operator
-// TODO(user): Add simple overview of use/purpose
+
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+The `eifa-replica-operator` is a Kubernetes operator designed to dynamically manage the replica count of a deployment based on the output of a scheduled job. It utilizes a `JobTemplate` and a schedule spec (such as a cron expression) to execute jobs. After each job run, the operator reads the number from the last line of the job's log output and uses it to adjust the `replica` count of the target deployment (`scaleTargetRef`) accordingly.
+
+This allows for dynamic scaling of services based on custom logic derived from the job's log output.
+
 
 ## Getting Started
 
