@@ -129,8 +129,8 @@ func (r *EifaReplicaReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Check current replicas against desired replicas
 	if *targetObj.Spec.Replicas != *desiredReplicas {
-		targetObj.Spec.Replicas = desiredReplicas
 		msg := fmt.Sprintf("update target replica from %d to %d", *targetObj.Spec.Replicas, *desiredReplicas)
+		targetObj.Spec.Replicas = desiredReplicas
 		if err := r.Update(ctx, targetObj); err != nil {
 			r.UpdateStatus(ctx, eifaReplica, &metav1.Condition{
 				Type:               schedulev1.FAILED,
