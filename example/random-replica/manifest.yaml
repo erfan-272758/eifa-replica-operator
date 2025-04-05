@@ -45,5 +45,5 @@ spec:
         spec:
           containers:
           - name: random-container
-            image: erfan272758/random-replica:v1
+            image: erfan272758/random-replica:v1.0.0
       backoffLimit: 2
