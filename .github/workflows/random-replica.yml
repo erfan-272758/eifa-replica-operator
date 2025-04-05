@@ -2,9 +2,8 @@ name: Random Replica CI/CD
 
 on:
   push:
-    paths:
-      - "example/random-replica/**"
-      - ".github/workflows/random-replica.yml"
+    tags:
+      - "*"
 
 jobs:
   build-and-push:

@@ -2,8 +2,8 @@ name: Operator CI/CD
 
 on:
   push:
-    paths-ignore:
-      - "example/**"
+    tags:
+      - "*"
 
 jobs:
   build-and-push:
