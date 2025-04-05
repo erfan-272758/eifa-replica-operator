@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: erfan272758/eifa-replica-operator
-  newTag: v3
+  newTag: v1.0.0
