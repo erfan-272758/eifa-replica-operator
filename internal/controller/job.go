@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	schedulev1 "github.com/erfan-272758/eifa-replica-operator/api/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -59,10 +61,25 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 	var compJob batchv1.Job
 	interval := 1 * time.Second
 	jobKey := client.ObjectKey{Name: job.Name, Namespace: job.Namespace}
-
+	counter := 3600 // timeout is 1h
 	for {
+		if counter <= 0 {
+			// delete job
+			_ = r.Client.Delete(ctx, &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      jobKey.Name,
+					Namespace: jobKey.Namespace,
+				},
+			})
+
+			return 0, errors.New("timeout exceeded for job completion")
+		}
 		err := r.Get(ctx, jobKey, &compJob)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				time.Sleep(interval)
+				continue
+			}
 			return 0, fmt.Errorf("can not get created job, %s", err)
 		}
 		jobStatus := r.checkJobStatus(&compJob)
@@ -78,6 +95,7 @@ func (r *EifaReplicaReconciler) runJob(ctx context.Context, req ctrl.Request, ei
 		}
 
 		time.Sleep(interval)
+		counter--
 	}
 
 	// 5. read logs to find desired replica
